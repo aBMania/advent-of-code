@@ -174,6 +174,6 @@ fn main() {
 
     println!("---");
     println!(
-        "🎄 Type `cargo solve {year}-{day_padded}` to run your solution."
+        "🎄 Type `cargo solve {year}-{day:02}` to run your solution."
     );
 }
