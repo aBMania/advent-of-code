@@ -6,8 +6,8 @@ use clap::Parser;
 
 const TEMPLATE: &str = r###"use advent_of_code::{read_example, read_input, should_submit, submit};
 
-const DAY: u8 = 1;
-const YEAR: u16 = 2021;
+const DAY: u8 = {DAY};
+const YEAR: u16 = {YEAR};
 
 pub fn part_one(input: &str) -> Option<u32> {
     // TODO: implem
