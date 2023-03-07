@@ -14,7 +14,7 @@ Solutions for [Advent of Code](https://adventofcode.com/) in [Rust](https://www.
 
 ```shell
 # example: `cargo scaffold 1 -y 2021`
-cargo scaffold <year>-<day>
+cargo scaffold <day> -y <year>
 
 # output
 # [INFO  aoc] 🎄 aoc-cli - Advent of Code command-line tool
@@ -34,6 +34,13 @@ cargo solve <year>-<day>
 # output
 # Part 1 response: 1288
 # Part 2 response: 1311
+```
+
+### Update a day puzzle (after solving part 1, to get part 2)
+
+```shell
+# example: `cargo update_puzzle 1 -y 2021`
+cargo update_puzzle <day> -y <year>
 ```
 
 ### Submit a day

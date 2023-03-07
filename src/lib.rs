@@ -1,6 +1,6 @@
-use std::{env, fs, io};
+use std::{env, fs, io, process};
 use std::fmt::{Debug, Display};
-use std::process::{Command};
+use std::process::{Command, Stdio};
 use std::str::FromStr;
 
 use clap::Parser;
@@ -15,6 +15,64 @@ pub fn read_example(day: u8, year: u16) -> String {
     let cwd = env::current_dir().unwrap();
     let input_filepath = cwd.join("src").join("bin").join(format!("{year}-{day:02}/example.txt"));
     fs::read_to_string(input_filepath).expect("Could not open example")
+}
+
+pub fn get_folder_path(day: u8, year: u16) -> String {
+    let day_padded = format!("{day:02}");
+    format!("src/bin/{year}-{day_padded}")
+}
+
+pub fn get_input_path(day: u8, year: u16) -> String {
+    let day_padded = format!("{day:02}");
+    format!("src/bin/{year}-{day_padded}/input.txt")
+}
+
+pub fn get_example_path(day: u8, year: u16) -> String {
+    let day_padded = format!("{day:02}");
+    format!("src/bin/{year}-{day_padded}/example.txt")
+}
+
+pub fn get_puzzle_path(day: u8, year: u16) -> String {
+    let day_padded = format!("{day:02}");
+    format!("src/bin/{year}-{day_padded}/puzzle.md")
+}
+
+pub fn get_module_path(day: u8, year: u16) -> String {
+    let day_padded = format!("{day:02}");
+    format!("src/bin/{year}-{day_padded}/main.rs")
+}
+
+
+pub fn fetch_puzzle_and_input(day: u8, year: u16, input_path: &str, puzzle_path: &str) {
+    let args: Vec<String> = vec![
+        "download".into(),
+        "--overwrite".into(),
+        "--input-file".into(),
+        input_path.to_string(),
+        "--puzzle-file".into(),
+        puzzle_path.to_string(),
+        "--day".into(),
+        day.to_string(),
+        "--year".into(),
+        year.to_string()
+    ];
+
+
+    // Fetch input and puzzle description
+    match Command::new("aoc")
+        .args(args)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output() {
+        Ok(_) => {
+            println!("Fetched puzzle and input from aoc website");
+        }
+        Err(e) => {
+            eprintln!("Failed to fetch puzzle and input from aoc website: {e}");
+            process::exit(1);
+        }
+    }
+
 }
 
 #[derive(Parser, Debug)]

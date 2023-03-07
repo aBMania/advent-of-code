@@ -1,6 +1,4 @@
-
-
-use advent_of_code::{input_to_list, read_example, read_input, should_submit, submit};
+use advent_of_code::{input_to_list, read_input, should_submit, submit};
 
 const DAY: u8 = 1;
 const YEAR: u16 = 2021;
@@ -98,19 +96,18 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use advent_of_code::read_example;
+    use super::{DAY, YEAR, part_one, part_two};
 
     #[test]
     fn test_part_one() {
         let example = read_example(DAY, YEAR);
-        // TODO: set example expected response
         assert_eq!(part_one(&example), Some(7));
     }
 
     #[test]
     fn test_part_two() {
         let example = read_example(DAY, YEAR);
-        // TODO: set example expected response
         assert_eq!(part_two(&example), Some(5));
     }
 }

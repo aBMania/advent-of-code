@@ -3,8 +3,9 @@ use std::io::{Write};
 use std::process;
 use std::process::{Command, Stdio};
 use clap::Parser;
+use advent_of_code::{fetch_puzzle_and_input, get_example_path, get_folder_path, get_input_path, get_module_path, get_puzzle_path};
 
-const TEMPLATE: &str = r###"use advent_of_code::{read_example, read_input, should_submit, submit};
+const TEMPLATE: &str = r###"use advent_of_code::{read_input, should_submit, submit};
 
 const DAY: u8 = {DAY};
 const YEAR: u16 = {YEAR};
@@ -72,7 +73,8 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use advent_of_code::read_example;
+    use super::{DAY, YEAR, part_one, part_two};
 
     #[test]
     fn test_part_one() {
@@ -112,13 +114,11 @@ fn create_file(path: &str) -> Result<File, std::io::Error> {
 fn main() {
     let Args { day, year } = Args::parse();
 
-    let day_padded = format!("{day:02}");
-
-    let folder_path = format!("src/bin/{year}-{day_padded}");
-    let input_path = format!("src/bin/{year}-{day_padded}/input.txt");
-    let example_path = format!("src/bin/{year}-{day_padded}/example.txt");
-    let puzzle_path = format!("src/bin/{year}-{day_padded}/puzzle.md");
-    let module_path = format!("src/bin/{year}-{day_padded}/main.rs");
+    let folder_path = get_folder_path(day, year);
+    let input_path = get_input_path(day, year);
+    let example_path = get_example_path(day, year);
+    let puzzle_path = get_puzzle_path(day, year);
+    let module_path = get_module_path(day, year);
 
     match safe_create_folder(&folder_path) {
         Ok(_) => {}
@@ -170,34 +170,7 @@ fn main() {
         }
     }
 
-    let args: Vec<String> = vec![
-        "download".into(),
-        "--overwrite".into(),
-        "--input-file".into(),
-        input_path,
-        "--puzzle-file".into(),
-        puzzle_path.to_string(),
-        "--day".into(),
-        day.to_string(),
-        "--year".into(),
-        year.to_string()
-    ];
-
-
-    // Fetch input and puzzle description
-    match Command::new("aoc")
-        .args(args)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output() {
-        Ok(_) => {
-            println!("Fetched puzzle and input from aoc website");
-        }
-        Err(e) => {
-            eprintln!("Failed to fetch puzzle and input from aoc website: {e}");
-            process::exit(1);
-        }
-    }
+    fetch_puzzle_and_input(day, year, &input_path, &puzzle_path);
 
     println!("---");
     println!(

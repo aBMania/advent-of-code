@@ -1,3 +1,4 @@
 [alias]
 scaffold = "run --bin scaffold --release -- "
 solve = "run --bin"
+update_puzzle = "run --bin update_puzzle --"
