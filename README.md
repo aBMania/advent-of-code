@@ -41,6 +41,14 @@ cargo solve <year>-<day>
 ```shell
 # example: `cargo update_puzzle 1 -y 2021`
 cargo update_puzzle <day> -y <year>
+
+# output
+# [INFO  aoc] 🎄 aoc-cli - Advent of Code command-line tool
+# [INFO  aoc_client] 🎅 Saved puzzle to 'src/bin/2021-01/puzzle.md'
+# [INFO  aoc_client] 🎅 Saved input to 'src/bin/2021-01/input.txt'
+# Fetched puzzle and input from aoc website
+# ---
+# 🎄 Puzzle in src/bin/2021-01/puzzle.md updated
 ```
 
 ### Submit a day
