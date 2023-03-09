@@ -1,7 +1,6 @@
 use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::{Write};
 use std::process;
-use std::process::{Command, Stdio};
 use clap::Parser;
 use advent_of_code::{fetch_puzzle_and_input, get_example_path, get_folder_path, get_input_path, get_module_path, get_puzzle_path};
 
