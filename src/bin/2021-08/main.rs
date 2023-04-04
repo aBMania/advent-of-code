@@ -1,3 +1,5 @@
+use clap::builder::Str;
+use itertools::Itertools;
 use nom::{IResult};
 use nom::bytes::complete::{tag, take_while};
 use nom::character::complete::char;
@@ -33,16 +35,97 @@ pub fn part_one(input: &str) -> Option<u32> {
             3, // 7 has 3 segment on
             4, // 4 has 4 segment on
             7  // 8 has 7 segment on
-        ].contains(&digits.len())).count()
+        ].contains(&digits.len())
+        ).count()
     });
 
     Some(count as u32)
 }
 
+pub fn compute_line_value(line: ([String; 10], [String; 4])) -> u32 {
+    let one = line.0.iter().find(|word| word.len() == 2).unwrap();
+    let seven = line.0.iter().find(|word| word.len() == 3).unwrap();
+    let eight = line.0.iter().find(|word| word.len() == 7).unwrap();
+
+    println!("One:   {one}");
+    println!("Seven: {seven}");
+    println!("Eight: {eight}");
+
+    let top = seven.chars().find(|c| !one.contains(*c)).unwrap();
+
+    println!("top: {top}");
+
+    let digits_with_6_bars: Vec<&String> = line.0.iter().filter(|word| word.len() == 6).collect();
+
+    let six = *digits_with_6_bars.iter().find(|x| !one.chars().all(|c| x.contains(c))).unwrap();
+
+    println!("Six: {six}");
+
+    let bottom_right = one.chars().find(|c| six.contains(*c)).unwrap();
+    let top_right = one.chars().find(|c| !six.contains(*c)).unwrap();
+
+    println!("bottom_right: {bottom_right}");
+    println!("top_right: {top_right}");
+
+    let three = line.0.iter().filter(|word| {
+        word.chars().filter(|c| [top, top_right, bottom_right].contains(c)).count() == 3
+    }).find(|word| word.len() == 5).unwrap();
+
+    println!("Three: {three}");
+
+    let nine = *digits_with_6_bars.iter().find(|x| three.chars().all(|c| x.contains(c))).unwrap();
+
+    println!("Nine: {nine}");
+
+    let zero = *digits_with_6_bars.iter().find(|word| ![six, nine].contains(word)).unwrap();
+
+    println!("Zero: {zero}");
+
+    let two_and_five: Vec<&String> = line.0.iter().filter(|word| word.len() == 5 && !word.eq(&three)).collect();
+
+    let two = *two_and_five.iter().find(|word| word.chars().contains(&top_right)).unwrap();
+    let five = *two_and_five.iter().find(|word| !word.chars().contains(&top_right)).unwrap();
+
+    println!("Two: {two}");
+    println!("Five: {five}");
+
+    let four = line.0.iter().find(|word| word.len() == 4).unwrap();
+
+    println!("Four: {four}");
+
+    let line_value = line.1.iter().enumerate().fold(0, |acc, (i, word)| {
+        let exponent: u32 = 3u32 - (i as u32);
+        let multiplicator = 10u32.pow(exponent);
+
+        let value = word.chars().sorted().collect::<String>();
+        acc + multiplicator * match value {
+            _ if value.eq(&zero.chars().sorted().collect::<String>()) => 0,
+            _ if value.eq(&one.chars().sorted().collect::<String>()) => 1,
+            _ if value.eq(&two.chars().sorted().collect::<String>()) => 2,
+            _ if value.eq(&three.chars().sorted().collect::<String>()) => 3,
+            _ if value.eq(&four.chars().sorted().collect::<String>()) => 4,
+            _ if value.eq(&five.chars().sorted().collect::<String>()) => 5,
+            _ if value.eq(&six.chars().sorted().collect::<String>()) => 6,
+            _ if value.eq(&seven.chars().sorted().collect::<String>()) => 7,
+            _ if value.eq(&eight.chars().sorted().collect::<String>()) => 8,
+            _ if value.eq(&nine.chars().sorted().collect::<String>()) => 9,
+            _ => unreachable!()
+        }
+    });
+
+    println!("Line value: {line_value}");
+
+    line_value
+}
 
 pub fn part_two(input: &str) -> Option<u32> {
-    // TODO: implem
-    None
+    let parsed: Vec<([String; 10], [String; 4])> = input.lines().map(parse_line).collect();
+
+    let total_sum: u32 = parsed.into_iter().map(|line| compute_line_value(line)).sum();
+
+    println!("Total sum: {}", total_sum);
+
+    Some(total_sum)
 }
 
 fn main() {
@@ -104,7 +187,6 @@ mod tests {
     #[test]
     fn test_part_one() {
         let example = read_example(DAY, YEAR);
-        // TODO: set example expected response
         assert_eq!(part_one(&example), Some(26));
     }
 
@@ -112,6 +194,6 @@ mod tests {
     fn test_part_two() {
         let example = read_example(DAY, YEAR);
         // TODO: set example expected response
-        assert_eq!(part_two(&example), None);
+        assert_eq!(part_two(&example), Some(61229));
     }
 }
