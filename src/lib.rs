@@ -2,6 +2,7 @@ use std::{env, fs, io, process};
 use std::fmt::{Debug, Display};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
+use grid::*;
 
 use clap::Parser;
 
@@ -133,4 +134,17 @@ pub fn submit(day: u8, year: u16, part: u8, response: &str) -> Result<bool, Subm
 
 pub fn input_to_list<T: FromStr>(input: &str) -> Result<Vec<T>, <T as FromStr>::Err> {
     input.lines().map(|line| line.trim().parse()).collect()
+}
+
+pub fn input_to_grid<T: FromStr>(input: &str) -> Result<Grid<T>, <T as FromStr>::Err> {
+    let lines: Vec<&str> = input.lines().map(|line| line.trim()).collect();
+    let cols = lines[0].len();
+
+    let grid_data: Result<Vec<T>, <T as FromStr>::Err> = lines
+        .into_iter()
+        .flat_map(|line| line.chars())
+        .map(|c| c.to_string().parse::<T>())
+        .collect();
+
+    Ok(Grid::from_vec(grid_data?, cols))
 }
