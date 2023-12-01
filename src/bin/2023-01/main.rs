@@ -25,6 +25,10 @@ pub fn part_two(input: &str) -> Option<u32> {
     let response = input.lines().into_iter().map(|mut line| {
         let mut replaced = true;
 
+        // Absolute overkill solution
+        // At first, i thought nineight should be understood as 9ight
+        // But actually, it is expected to be 98
+        // Simple adjustment is to replace 9 -> 9e (keeping the last char to be reused later)
         while replaced {
             let mut int_substrings_index: Vec<_> = INT_STRINGS
                 .iter()
@@ -37,7 +41,10 @@ pub fn part_two(input: &str) -> Option<u32> {
                 .collect();
 
             if let Some((_, i)) = int_substrings_index.pop() {
-                line = &*line.replacen(INT_STRINGS[i], &*format!("{}{}", i + 1, INT_STRINGS[i].chars().last().unwrap()), 1).leak();
+                // The trick
+                let last_char = INT_STRINGS[i].chars().last().unwrap();
+
+                line = &*line.replacen(INT_STRINGS[i], &*format!("{}{}", i + 1, last_char), 1).leak();
                 replaced = true
             } else {
                 replaced = false
