@@ -7,7 +7,7 @@ struct Args {
     day: u8,
 
     /// Number of times to greet
-    #[arg(short, long, default_value_t = 2022)]
+    #[arg(short, long, default_value_t = 2023)]
     year: u16,
 }
 

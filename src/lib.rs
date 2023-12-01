@@ -18,6 +18,12 @@ pub fn read_example(day: u8, year: u16) -> String {
     fs::read_to_string(input_filepath).expect("Could not open example")
 }
 
+pub fn read_example_2(day: u8, year: u16) -> String {
+    let cwd = env::current_dir().unwrap();
+    let input_filepath = cwd.join("src").join("bin").join(format!("{year}-{day:02}/example2.txt"));
+    fs::read_to_string(input_filepath).expect("Could not open example")
+}
+
 pub fn get_folder_path(day: u8, year: u16) -> String {
     let day_padded = format!("{day:02}");
     format!("src/bin/{year}-{day_padded}")
@@ -47,6 +53,8 @@ pub fn get_module_path(day: u8, year: u16) -> String {
 pub fn fetch_puzzle_and_input(day: u8, year: u16, input_path: &str, puzzle_path: &str) {
     let args: Vec<String> = vec![
         "download".into(),
+        "--session-file".into(),
+        ".session".into(),
         "--overwrite".into(),
         "--input-file".into(),
         input_path.to_string(),
@@ -58,6 +66,8 @@ pub fn fetch_puzzle_and_input(day: u8, year: u16, input_path: &str, puzzle_path:
         year.to_string()
     ];
 
+
+    println!("aoc {:?}", args);
 
     // Fetch input and puzzle description
     match Command::new("aoc")
@@ -105,6 +115,8 @@ impl Display for SubmitError {
 pub fn submit(day: u8, year: u16, part: u8, response: &str) -> Result<bool, SubmitError> {
     let args: Vec<String> = vec![
         "submit".into(),
+        "--session-file".into(),
+        ".session".into(),
         part.to_string(),
         response.to_string(),
         "--day".into(),
