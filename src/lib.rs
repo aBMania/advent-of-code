@@ -1,3 +1,6 @@
+#![feature(type_alias_impl_trait)]
+#![feature(impl_trait_in_assoc_type)]
+
 use std::{env, fs, io, process};
 use std::fmt::{Debug, Display};
 use std::process::{Command, Stdio};
@@ -63,7 +66,7 @@ pub fn fetch_puzzle_and_input(day: u8, year: u16, input_path: &str, puzzle_path:
         "--day".into(),
         day.to_string(),
         "--year".into(),
-        year.to_string()
+        year.to_string(),
     ];
 
 
@@ -83,7 +86,6 @@ pub fn fetch_puzzle_and_input(day: u8, year: u16, input_path: &str, puzzle_path:
             process::exit(1);
         }
     }
-
 }
 
 #[derive(Parser, Debug)]
@@ -100,7 +102,7 @@ pub fn should_submit() -> bool {
 
 pub enum SubmitError {
     IoError(io::Error),
-    GaveAnswerTooRecently
+    GaveAnswerTooRecently,
 }
 
 impl Display for SubmitError {
@@ -122,7 +124,7 @@ pub fn submit(day: u8, year: u16, part: u8, response: &str) -> Result<bool, Subm
         "--day".into(),
         day.to_string(),
         "--year".into(),
-        year.to_string()
+        year.to_string(),
     ];
 
 
@@ -148,7 +150,58 @@ pub fn input_to_list<T: FromStr>(input: &str) -> Result<Vec<T>, <T as FromStr>::
     input.lines().map(|line| line.trim().parse()).collect()
 }
 
-pub fn input_to_grid<T: FromStr>(input: &str) -> Result<Grid<T>, <T as FromStr>::Err> {
+pub type CustomGrid<T> = Grid<T>;
+
+pub trait NeighborsIterator<'a, T: 'a> {
+    type NeighborIter: Iterator<Item = ((usize, usize), &'a T)>;
+    fn iter_neighbors(&'a self, row: usize, col: usize) -> Self::NeighborIter;
+}
+
+pub trait NeighborsDiagonalIterator<'a, T: 'a> {
+    type NeighborIter: Iterator<Item = ((usize, usize), &'a T)>;
+
+    fn iter_diagonal_neighbors(&'a self, row: usize, col: usize) -> Self::NeighborIter;
+}
+
+impl<'a, T: 'a> NeighborsIterator<'a, T> for CustomGrid<T> {
+    type NeighborIter = impl Iterator<Item = ((usize, usize), &'a T)>;
+
+    fn iter_neighbors(&'a self, row: usize, col: usize) -> Self::NeighborIter {
+        [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+            .iter()
+            .map(move |(col_offset, row_offset)| ((col as isize + col_offset), (row as isize + row_offset)))
+            .filter_map(|(col, row)| {
+                if col.is_negative() || row.is_negative() {
+                    None
+                } else {
+                    self.get(row as usize, col as usize)
+                        .map(|val| ((row as usize, col as usize), val))
+                }
+            })
+    }
+}
+
+impl<'a, T: 'a> NeighborsDiagonalIterator<'a, T> for CustomGrid<T> {
+    type NeighborIter = impl Iterator<Item = ((usize, usize), &'a T)>;
+
+    fn iter_diagonal_neighbors(&'a self, row: usize, col: usize) -> Self::NeighborIter {
+        [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+            .iter()
+            .map(move |(col_offset, row_offset)| ((col as isize + col_offset), (row as isize + row_offset)))
+            .filter_map(|(col, row)| {
+                if col.is_negative() || row.is_negative() {
+                    None
+                } else {
+                    self.get(row as usize, col as usize)
+                        .map(|val| ((row as usize, col as usize), val))
+                }
+            })
+    }
+}
+
+
+
+pub fn input_to_grid<T: FromStr>(input: &str) -> Result<CustomGrid<T>, <T as FromStr>::Err> {
     let lines: Vec<&str> = input.lines().map(|line| line.trim()).collect();
     let cols = lines[0].len();
 
@@ -158,5 +211,5 @@ pub fn input_to_grid<T: FromStr>(input: &str) -> Result<Grid<T>, <T as FromStr>:
         .map(|c| c.to_string().parse::<T>())
         .collect();
 
-    Ok(Grid::from_vec(grid_data?, cols))
+    Ok(CustomGrid::from_vec(grid_data?, cols))
 }

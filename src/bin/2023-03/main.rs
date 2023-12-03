@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use advent_of_code::{input_to_grid, read_input, should_submit, submit};
+use advent_of_code::{CustomGrid, input_to_grid, read_input, should_submit, submit, NeighborsDiagonalIterator};
 
 const NEIGHBORS: [(isize, isize); 8] = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)];
 
@@ -31,13 +31,8 @@ pub fn part_one(input: &str) -> Option<u32> {
         }
 
         if !is_block_counted {
-            is_block_counted = NEIGHBORS
-                .iter()
-                .map(|(col_offset, row_offset)| ((col as isize + col_offset) as usize, (row as isize + row_offset) as usize))
-                .filter_map(|(col, row)| {
-                    grid.get(row, col)
-                })
-                .any(|&neighbor_value| {
+            is_block_counted = grid.iter_diagonal_neighbors(row, col)
+                .any(|(_, &neighbor_value)| {
                     neighbor_value != '.' && !neighbor_value.is_ascii_digit()
                 });
         }
@@ -53,7 +48,7 @@ pub fn part_one(input: &str) -> Option<u32> {
 
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let grid = input_to_grid::<char>(input).unwrap();
+    let grid: CustomGrid<char> = input_to_grid::<char>(input).unwrap();
 
     let mut gear_map: BTreeMap<(usize, usize), Vec<u32>> = BTreeMap::new();
     let mut block_sum = 0u32;
@@ -77,18 +72,12 @@ pub fn part_two(input: &str) -> Option<u32> {
 
 
         if current_gear.is_none() {
-            current_gear = NEIGHBORS
-                .iter()
-                .map(|(col_offset, row_offset)| ((col as isize + col_offset) as usize, (row as isize + row_offset) as usize))
-                .filter(|&(col, row)| {
-                    grid
-                        .get(row, col)
-                        .map(|&neighbor_value| neighbor_value == '*')
-                        .unwrap_or(false)
-                })
+            current_gear = grid
+                .iter_diagonal_neighbors(row, col)
+                .filter(|(_, &neighbor_value)| neighbor_value == '*')
+                .map(|(pos, _)| pos)
                 .next()
         }
-
 
 
         if let Some(value_digit) = value.to_digit(10) {
