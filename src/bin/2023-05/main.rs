@@ -1,4 +1,5 @@
 use std::cmp::{min, max};
+use std::time::Instant;
 use advent_of_code::{read_input, should_submit, submit};
 
 const DAY: u8 = 5;
@@ -162,11 +163,14 @@ pub fn part_two(input: &str) -> Option<u64> {
 
 fn main() {
     let input = read_input(DAY, YEAR);
+
+    let now = Instant::now();
     let part_one_response = part_one(&input);
+    let ellapsed = now.elapsed().as_micros();
 
     if let Some(part_one_response) = part_one_response {
         if should_submit() {
-            println!("Submitting part 1 response: {part_one_response}");
+            println!("Submitting part 1 response {ellapsed}μs: {part_one_response}");
             match submit(DAY, YEAR, 1, &part_one_response.to_string()) {
                 Ok(correct) => {
                     if correct {
@@ -180,16 +184,18 @@ fn main() {
                 }
             }
         } else {
-            println!("Part 1 response: {part_one_response}")
+            println!("Part 1 response ({ellapsed}μs): {part_one_response}")
         }
     } else {
         println!("No part 1 response");
     }
 
+    let now = Instant::now();
     let part_two_response = part_two(&input);
+    let ellapsed = now.elapsed().as_micros();
     if let Some(part_two_response) = part_two_response {
         if should_submit() {
-            println!("Submitting part 2 response: {part_two_response}");
+            println!("Submitting part 2 response ({ellapsed}μs): {part_two_response}");
             match submit(DAY, YEAR, 2, &part_two_response.to_string()) {
                 Ok(correct) => {
                     if correct {
@@ -203,7 +209,7 @@ fn main() {
                 }
             }
         } else {
-            println!("Part 2 response: {part_two_response}")
+            println!("Part 2 response ({ellapsed}μs): {part_two_response}")
         }
     } else {
         println!("No part 2 response");
