@@ -29,7 +29,7 @@ fn main() {
 
     if let Some(part_one_response) = part_one_response {
         if should_submit() {
-            println!("Submitting part 1 response {ellapsed}μs: {part_one_response}");
+            println!("Submitting part 1 response ({ellapsed})μs: {part_one_response}");
             match submit(DAY, YEAR, 1, &part_one_response.to_string()) {
                 Ok(correct) => {
                     if correct {

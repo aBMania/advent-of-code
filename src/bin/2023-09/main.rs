@@ -1,6 +1,5 @@
 use advent_of_code::{read_input, should_submit, submit};
 use std::time::Instant;
-use itertools::Itertools;
 
 const DAY: u8 = 9;
 const YEAR: u16 = 2023;

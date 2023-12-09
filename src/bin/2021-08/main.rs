@@ -1,4 +1,3 @@
-use clap::builder::Str;
 use itertools::Itertools;
 use nom::{IResult};
 use nom::bytes::complete::{tag, take_while};
