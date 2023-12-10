@@ -159,7 +159,6 @@ pub trait NeighborsIterator<'a, T: 'a> {
 
 pub trait NeighborsDiagonalIterator<'a, T: 'a> {
     type NeighborIter: Iterator<Item = ((usize, usize), &'a T)>;
-
     fn iter_diagonal_neighbors(&'a self, row: usize, col: usize) -> Self::NeighborIter;
 }
 
@@ -167,7 +166,7 @@ impl<'a, T: 'a> NeighborsIterator<'a, T> for CustomGrid<T> {
     type NeighborIter = impl Iterator<Item = ((usize, usize), &'a T)>;
 
     fn iter_neighbors(&'a self, row: usize, col: usize) -> Self::NeighborIter {
-        [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+        [(0, -1), (0, 1), (1, 0), (-1, 0)]
             .iter()
             .map(move |(col_offset, row_offset)| ((col as isize + col_offset), (row as isize + row_offset)))
             .filter_map(|(col, row)| {
@@ -199,7 +198,66 @@ impl<'a, T: 'a> NeighborsDiagonalIterator<'a, T> for CustomGrid<T> {
     }
 }
 
+pub trait Neighbors<T> {
+    fn right(&self, row: usize, col: usize) -> Option<((usize, usize), &T)>;
+    fn left(&self, row: usize, col: usize) -> Option<((usize, usize), &T)>;
+    fn up(&self, row: usize, col: usize) -> Option<((usize, usize), &T)>;
+    fn down(&self, row: usize, col: usize) -> Option<((usize, usize), &T)>;
+    fn right_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)>;
+    fn left_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)>;
+    fn up_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)>;
+    fn down_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)>;
+}
 
+impl<T> Neighbors<T> for CustomGrid<T> {
+    fn right(&self, row: usize, col: usize) -> Option<((usize, usize), &T)> {
+        self.get(row, col + 1).map(|val| ((row, col + 1), val))
+    }
+
+    fn left(&self, row: usize, col: usize) -> Option<((usize, usize), &T)> {
+        if col == 0 {
+            None
+        } else {
+            self.get(row, col - 1).map(|val| ((row, col - 1), val))
+        }
+    }
+
+    fn up(&self, row: usize, col: usize) -> Option<((usize, usize), &T)> {
+        if row == 0 {
+            None
+        } else {
+            self.get(row - 1, col).map(|val| ((row - 1, col), val))
+        }
+    }
+
+    fn down(&self, row: usize, col: usize) -> Option<((usize, usize), &T)> {
+        self.get(row + 1, col).map(|val| ((row + 1, col), val))
+    }
+
+    fn right_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)> {
+        self.get_mut(row, col + 1).map(|val| ((row, col + 1), val))
+    }
+
+    fn left_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)> {
+        if col == 0 {
+            None
+        } else {
+            self.get_mut(row, col - 1).map(|val| ((row, col - 1), val))
+        }
+    }
+
+    fn up_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)> {
+        if row == 0 {
+            None
+        } else {
+            self.get_mut(row - 1, col).map(|val| ((row - 1, col), val))
+        }
+    }
+
+    fn down_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)> {
+        self.get_mut(row + 1, col).map(|val| ((row + 1, col), val))
+    }
+}
 
 pub fn input_to_grid<T: FromStr>(input: &str) -> Result<CustomGrid<T>, <T as FromStr>::Err> {
     let lines: Vec<&str> = input.lines().map(|line| line.trim()).collect();
@@ -212,4 +270,23 @@ pub fn input_to_grid<T: FromStr>(input: &str) -> Result<CustomGrid<T>, <T as Fro
         .collect();
 
     Ok(CustomGrid::from_vec(grid_data?, cols))
+}
+
+pub fn expand_grid<T: Default + Clone>(grid: &CustomGrid<T>, empty: T) -> CustomGrid<T> {
+    let mut expanded_grid: Grid<T> = CustomGrid::init(grid.rows() * 2+1, grid.cols() * 2+1, empty);
+
+    for ((row, col), value) in grid.indexed_iter() {
+        *expanded_grid.get_mut(row * 2+1, col * 2+1).unwrap() = value.clone();
+    }
+
+    expanded_grid
+}
+
+pub fn print_grid<T: Display>(grid: &CustomGrid<T>) {
+    for row in 0..grid.rows() {
+        for col in 0..grid.cols() {
+            print!("{}", grid.get(row, col).unwrap())
+        }
+        println!()
+    }
 }
