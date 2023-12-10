@@ -1,5 +1,6 @@
 use advent_of_code::{read_input, should_submit, submit};
 use std::time::Instant;
+use tailcall::tailcall;
 
 const DAY: u8 = 9;
 const YEAR: u16 = 2023;
@@ -16,6 +17,7 @@ pub fn parse_input(input: &str) -> Vec<Vec<i32>> {
         .collect()
 }
 
+
 fn serie_gaps(serie: &Vec<i32>) -> Vec<i32> {
     serie
         .windows(2)
@@ -27,21 +29,30 @@ fn serie_gaps(serie: &Vec<i32>) -> Vec<i32> {
 }
 
 fn find_next(serie: &Vec<i32>) -> i32 {
-    let gaps = serie_gaps(serie);
-    if gaps.iter().all(|&n| n == 0) {
-        *serie.last().expect("No more element in serie")
-    } else {
-        serie.last().expect("No more element in serie") + find_next(&gaps)
+
+    #[tailcall]
+    fn find_next_inner(serie: &Vec<i32>) -> i32 {
+        let gaps = serie_gaps(serie);
+        if gaps.iter().all(|&n| n == 0) {
+            *serie.last().expect("No more element in serie")
+        } else {
+            serie.last().expect("No more element in serie") + find_next(&gaps)
+        }
     }
+    find_next_inner(serie)
 }
 
 fn find_previous(serie: &Vec<i32>) -> i32 {
-    let gaps = serie_gaps(serie);
-    if gaps.iter().all(|&n| n == 0) {
-        *serie.first().expect("No more element in serie")
-    } else {
-        serie.first().expect("No more element in serie") - find_previous(&gaps)
+    #[tailcall]
+    fn find_previous_inner(serie: &Vec<i32>) -> i32 {
+        let gaps = serie_gaps(serie);
+        if gaps.iter().all(|&n| n == 0) {
+            *serie.first().expect("No more element in serie")
+        } else {
+            serie.first().expect("No more element in serie") - find_previous(&gaps)
+        }
     }
+    find_previous_inner(serie)
 }
 
 pub fn part_one(input: &str) -> Option<i32> {
