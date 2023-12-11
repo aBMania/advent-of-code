@@ -1,15 +1,14 @@
 use std::collections::HashMap;
 use std::time::Instant;
-use itertools::Itertools;
 
-use tailcall::tailcall;
-
-use advent_of_code::{CustomGrid, expand_grid, input_to_grid, Neighbors, NeighborsIterator, print_grid, read_input, should_submit, submit};
+use advent_of_code::{
+    CustomGrid, input_to_grid, read_input, should_submit, submit,
+};
 
 const DAY: u8 = 10;
 const YEAR: u16 = 2023;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 enum Direction {
     Up,
     Down,
@@ -17,179 +16,199 @@ enum Direction {
     Left,
 }
 
+fn step(
+    grid: &CustomGrid<char>,
+    next_row: usize,
+    next_col: usize,
+    direction: Direction,
+) -> (usize, usize, Direction) {
+    let direction = match (grid.get(next_row, next_col), direction) {
+        (Some('│'), Direction::Down) => Direction::Down,
+        (Some('│'), Direction::Up) => Direction::Up,
+        (Some('─'), Direction::Right) => Direction::Right,
+        (Some('─'), Direction::Left) => Direction::Left,
+        (Some('└'), Direction::Down) => Direction::Right,
+        (Some('└'), Direction::Left) => Direction::Up,
+        (Some('┘'), Direction::Down) => Direction::Left,
+        (Some('┘'), Direction::Right) => Direction::Up,
+        (Some('┐'), Direction::Right) => Direction::Down,
+        (Some('┐'), Direction::Up) => Direction::Left,
+        (Some('┌'), Direction::Left) => Direction::Down,
+        (Some('┌'), Direction::Up) => Direction::Right,
+        _ => unreachable!("should not come from this direction/char"),
+    };
 
-fn next_direction(c: char, from: Direction) -> Direction {
-    match (c, from) {
-        ('|', d @ _) => d,
-        ('-', d @ _) => d,
-        ('L', Direction::Down) => Direction::Right,
-        ('L', Direction::Left) => Direction::Up,
-        ('J', Direction::Down) => Direction::Left,
-        ('J', Direction::Right) => Direction::Up,
-        ('7', Direction::Right) => Direction::Down,
-        ('7', Direction::Up) => Direction::Left,
-        ('F', Direction::Left) => Direction::Down,
-        ('F', Direction::Up) => Direction::Right,
-        (_, _) => unreachable!("should not come from this direction/char")
+    let ((next_row, next_col), _) = match direction {
+        Direction::Up => grid.up_indexed(next_row, next_col).unwrap(),
+        Direction::Down => grid.down_indexed(next_row, next_col).unwrap(),
+        Direction::Right => grid.right_indexed(next_row, next_col).unwrap(),
+        Direction::Left => grid.left_indexed(next_row, next_col).unwrap()
+    };
+
+    (next_row, next_col, direction)
+}
+
+fn start_point(grid: &CustomGrid<char>) -> (usize, usize) {
+    grid
+        .indexed_iter()
+        .find(|(_, &c)| c == 'S')
+        .map(|((start_row, start_col), _)| (start_row, start_col))
+        .expect("no S in grid")
+}
+
+fn replace_with_box_char(grid: &mut CustomGrid<char>) {
+    for c in grid.iter_mut() {
+        match *c {
+            'F' => *c = '┌',
+            '7' => *c = '┐',
+            '-' => *c = '─',
+            '|' => *c = '│',
+            'J' => *c = '┘',
+            'L' => *c = '└',
+            '.' => *c = '•',
+            'S' => {}
+            _ => panic!("invalid char")
+        }
     }
 }
 
-fn first_step(grid: &CustomGrid<char>, start_row: usize, start_col: usize) -> (usize, usize, char, Direction) {
-    let (((next_row, next_col), &next_char), direction) = grid.up(start_row, start_col)
-        .filter(|(_, &c)| c == '|' || c == '7' || c == 'F')
-        .map(|v| (v, Direction::Up))
-        .unwrap_or_else(|| grid.right(start_row, start_col)
-            .filter(|(_, &c)| c == '-' || c == '7' || c == 'J')
-            .map(|v| (v, Direction::Right))
-            .unwrap_or_else(|| grid.down(start_row, start_col)
-                .filter(|(_, &c)| c == '|' || c == 'L' || c == 'J')
-                .map(|v| (v, Direction::Down))
-                .expect("Could not find a pipe near start"))
-        );
-
-    (next_row, next_col, next_char, direction)
+fn replace_starting_point(grid: &mut CustomGrid<char>, start_row: usize, start_col: usize) -> Direction {
+    // Replace starting point
+    match (
+        grid.left(start_row, start_col),
+        grid.up(start_row, start_col),
+        grid.right(start_row, start_col),
+        grid.down(start_row, start_col),
+    ) {
+        (Some('─' | '┌' | '└'), Some('┌' | '│' | '┐'), _, _) => {
+            *grid.get_mut(start_row, start_col).unwrap() = '┘';
+            Direction::Down
+        }
+        (Some('─' | '┌' | '└'), _, Some('─' | '┘' | '┐'), _) => {
+            *grid.get_mut(start_row, start_col).unwrap() = '─';
+            Direction::Right
+        }
+        (Some('─' | '┌' | '└'), _, _, Some('│' | '┘' | '└')) => {
+            *grid.get_mut(start_row, start_col).unwrap() = '┐';
+            Direction::Up
+        }
+        (_, Some('┌' | '│' | '┐'), Some('─' | '┘' | '┐'), _) => {
+            *grid.get_mut(start_row, start_col).unwrap() = '└';
+            Direction::Down
+        }
+        (_, Some('┌' | '│' | '┐'), _, Some('│' | '┘' | '└')) => {
+            *grid.get_mut(start_row, start_col).unwrap() = '│';
+            Direction::Up
+        }
+        (_, _, Some('─' | '┘' | '┐'), Some('│' | '┘' | '└')) => {
+            *grid.get_mut(start_row, start_col).unwrap() = '┌';
+            Direction::Up
+        }
+        _ => panic!("invalid start")
+    }
 }
 
-fn step(grid: &CustomGrid<char>, next_row: usize, next_col: usize, next_char: char, direction: Direction) -> (usize, usize, char, Direction) {
-    let direction = next_direction(next_char, direction);
-    let ((next_row, next_col), &next_char) = match direction {
-        Direction::Up => grid.up(next_row, next_col),
-        Direction::Down => grid.down(next_row, next_col),
-        Direction::Right => grid.right(next_row, next_col),
-        Direction::Left => grid.left(next_row, next_col)
-    }.expect("broken path");
+fn count_inside_space(grid: &CustomGrid<char>) -> u32 {
+    #[derive(Debug, PartialEq)]
+    enum State {
+        Outside,
+        Inside,
+        BottomCorner(bool),
+        TopCorner(bool),
+    }
+    let mut count = 0;
 
-    (next_row, next_col, next_char, direction)
+    // Knot theory magic
+    for row in 0..grid.rows() {
+        let mut state = State::Outside;
+        for col in 0..grid.cols() {
+            state = match (state, grid.get(row, col).unwrap()) {
+                (State::Outside, '│') => State::Inside,
+                (State::Inside, '│') => State::Outside,
+                (State::Inside, ' ') => {
+                    count += 1;
+                    State::Inside
+                }
+                (State::Outside, '┌') => State::BottomCorner(false),
+                (State::Outside, '└') => State::TopCorner(false),
+                (State::Inside, '┌') => State::BottomCorner(true),
+                (State::Inside, '└') => State::TopCorner(true),
+                (State::BottomCorner(inside @ _), '─') => State::BottomCorner(inside),
+                (State::BottomCorner(true), '┐') => State::Inside,
+                (State::BottomCorner(true), '┘') => State::Outside,
+                (State::BottomCorner(false), '┐') => State::Outside,
+                (State::BottomCorner(false), '┘') => State::Inside,
+                (State::TopCorner(inside @ _), '─') => State::TopCorner(inside),
+                (State::TopCorner(true), '┐') => State::Outside,
+                (State::TopCorner(true), '┘') => State::Inside,
+                (State::TopCorner(false), '┐') => State::Inside,
+                (State::TopCorner(false), '┘') => State::Outside,
+                (state @ _, _) => state
+            };
+        }
+    };
+    count
 }
+
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let grid: CustomGrid<char> = input_to_grid(input).unwrap();
-    let ((start_row, start_col), _) = grid.indexed_iter().find(|(_, &c)| c == 'S').expect("no S in grid");
+    let mut grid: CustomGrid<char> = input_to_grid(input).unwrap();
 
-    let (mut next_row, mut next_col, mut next_char, mut direction) = first_step(&grid, start_row, start_col);
+    let (start_row, start_col) = start_point(&grid);
 
-    let mut path_len = 1;
+    replace_with_box_char(&mut grid);
+    let start_direction = replace_starting_point(&mut grid, start_row, start_col);
 
-    while next_row != start_row || next_col != start_col {
-        (next_row, next_col, next_char, direction) = step(&grid, next_row, next_col, next_char, direction);
-        path_len += 1;
-    }
+    let (mut next_row, mut next_col, mut direction) = (start_row, start_col, start_direction);
 
-    Some(path_len / 2)
-}
+    let mut path_length = 0;
+    loop {
+        path_length += 1;
+        (next_row, next_col, direction) = step(&grid, next_row, next_col, direction);
 
-fn expand_grid_with(grid: &mut CustomGrid<char>, c: char) {
-    for row in 0..grid.rows() {
-        for col in 0..grid.cols() {
-            if let Some(cell) = grid.get(row, col) {
-                match cell {
-                    '|' => {
-                        grid.up_mut(row, col).map(|(_, up)| *up = c);
-                        grid.down_mut(row, col).map(|(_, down)| *down = c);
-                    }
-                    '-' => {
-                        grid.right_mut(row, col).map(|(_, right)| *right = c);
-                        grid.left_mut(row, col).map(|(_, left)| *left = c);
-                    }
-                    'L' => {
-                        grid.right_mut(row, col).map(|(_, right)| *right = c);
-                        grid.up_mut(row, col).map(|(_, up)| *up = c);
-                    }
-                    'J' => {
-                        grid.up_mut(row, col).map(|(_, up)| *up = c);
-                        grid.left_mut(row, col).map(|(_, left)| *left = c);
-                    }
-                    '7' => {
-                        grid.left_mut(row, col).map(|(_, left)| *left = c);
-                        grid.down_mut(row, col).map(|(_, down)| *down = c);
-                    }
-                    'F' => {
-                        grid.right_mut(row, col).map(|(_, right)| *right = c);
-                        grid.down_mut(row, col).map(|(_, down)| *down = c);
-                    }
-                    _ => {}
-                };
-            }
+        if (next_row, next_col) == (start_row, start_col) {
+            break;
         }
     }
-}
 
-fn fill(grid: &mut CustomGrid<char>, row: usize, col: usize) {
-    #[tailcall]
-    fn fill_inner(grid: &mut CustomGrid<char>, neighbors: Vec<(usize, usize)>) {
-        if neighbors.len() == 0 {
-            return;
-        }
-        for (row, col) in neighbors.iter() {
-            *grid.get_mut(*row, *col).unwrap() = 'O';
-        }
-
-        let next_neighbors: Vec<(usize, usize)> = neighbors
-            .into_iter()
-            .flat_map(
-                |(row, col)| {
-                    grid
-                        .iter_neighbors(row, col)
-                        .filter(|((row, col), _)| *grid.get(*row, *col).unwrap() == '.')
-                        .map(|(pos, _)| pos)
-                        .collect::<Vec<_>>()
-                }
-            )
-            .dedup()
-            .collect();
-
-        fill_inner(grid, next_neighbors)
-    }
-
-    fill_inner(grid, vec![(row, col)])
+    Some(path_length / 2)
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
     let mut grid: CustomGrid<char> = input_to_grid(input).unwrap();
-    let ((start_row, start_col), _) = grid.indexed_iter().find(|(_, &c)| c == 'S').expect("no S in grid");
 
-    let (mut next_row, mut next_col, mut next_char, mut direction) = first_step(&grid, start_row, start_col);
+    let (start_row, start_col) = start_point(&grid);
 
+    replace_with_box_char(&mut grid);
+    let start_direction = replace_starting_point(&mut grid, start_row, start_col);
 
     let mut path = HashMap::from([
         ((start_row, start_col), true)
     ]);
+    let (mut next_row, mut next_col, mut direction) = (start_row, start_col, start_direction);
 
-    while next_row != start_row || next_col != start_col {
+    loop {
         path.insert((next_row, next_col), true);
-        (next_row, next_col, next_char, direction) = step(&grid, next_row, next_col, next_char, direction);
+        (next_row, next_col, direction) = step(&grid, next_row, next_col, direction);
+
+        if (next_row, next_col) == (start_row, start_col) {
+            break;
+        }
     }
 
+    // Remove everything not in path
     for row in 0..grid.rows() {
         for col in 0..grid.cols() {
             if !path.contains_key(&(row, col)) {
-                *grid.get_mut(row, col).unwrap() = '.'
+                *grid.get_mut(row, col).unwrap() = ' ';
             }
         }
     }
 
-    let mut expanded_grid = expand_grid(&grid, '.');
-    expand_grid_with(&mut expanded_grid, 'x');
-
-    fill(&mut expanded_grid, start_row * 2 + 1 + 1, start_col * 2 + 1 - 1);
-
-
-    for row in 0..grid.rows() {
-        for col in 0..grid.cols() {
-            if *expanded_grid.get(row * 2 + 1, col * 2 + 1).unwrap() == 'O' {
-                *grid.get_mut(row, col).unwrap() = '0'
-            }
-        }
-    }
-
-    // print_grid(&grid);
-    // println!();
+    // println!("{:?}", grid);
 
     Some(
-        grid
-            .indexed_iter()
-            .filter(|((row, col), _)| *expanded_grid.get(*row * 2 + 1, *col * 2 + 1).unwrap() == 'O')
-            .count() as u32
+        count_inside_space(&grid)
     )
 }
 

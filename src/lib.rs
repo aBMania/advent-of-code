@@ -1,13 +1,11 @@
-#![feature(type_alias_impl_trait)]
-#![feature(impl_trait_in_assoc_type)]
-
 use std::{env, fs, io, process};
-use std::fmt::{Debug, Display};
+use std::fmt::{Debug, Display, Formatter};
+use std::ops::{Deref, DerefMut};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
-use grid::*;
 
 use clap::Parser;
+use grid::*;
 
 pub fn read_input(day: u8, year: u16) -> String {
     let cwd = env::current_dir().unwrap();
@@ -150,22 +148,37 @@ pub fn input_to_list<T: FromStr>(input: &str) -> Result<Vec<T>, <T as FromStr>::
     input.lines().map(|line| line.trim().parse()).collect()
 }
 
-pub type CustomGrid<T> = Grid<T>;
+#[repr(transparent)]
+pub struct CustomGrid<T>(Grid<T>);
 
-pub trait NeighborsIterator<'a, T: 'a> {
-    type NeighborIter: Iterator<Item = ((usize, usize), &'a T)>;
-    fn iter_neighbors(&'a self, row: usize, col: usize) -> Self::NeighborIter;
+impl<T> Deref for CustomGrid<T> {
+    type Target = Grid<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
-pub trait NeighborsDiagonalIterator<'a, T: 'a> {
-    type NeighborIter: Iterator<Item = ((usize, usize), &'a T)>;
-    fn iter_diagonal_neighbors(&'a self, row: usize, col: usize) -> Self::NeighborIter;
+impl<T> DerefMut for CustomGrid<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }
 
-impl<'a, T: 'a> NeighborsIterator<'a, T> for CustomGrid<T> {
-    type NeighborIter = impl Iterator<Item = ((usize, usize), &'a T)>;
+impl<T: Display> Debug for CustomGrid<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for row in 0..self.0.rows() {
+            for col in 0..self.0.cols() {
+                write!(f, "{}", self.0.get(row, col).unwrap())?;
+            }
+            writeln!(f)?;
+        }
+        Ok(())
+    }
+}
 
-    fn iter_neighbors(&'a self, row: usize, col: usize) -> Self::NeighborIter {
+impl<T> CustomGrid<T> {
+    pub fn iter_neighbors(&self, row: usize, col: usize) -> impl Iterator<Item=((usize, usize), &T)> {
         [(0, -1), (0, 1), (1, 0), (-1, 0)]
             .iter()
             .map(move |(col_offset, row_offset)| ((col as isize + col_offset), (row as isize + row_offset)))
@@ -173,17 +186,12 @@ impl<'a, T: 'a> NeighborsIterator<'a, T> for CustomGrid<T> {
                 if col.is_negative() || row.is_negative() {
                     None
                 } else {
-                    self.get(row as usize, col as usize)
+                    self.0.get(row as usize, col as usize)
                         .map(|val| ((row as usize, col as usize), val))
                 }
             })
     }
-}
-
-impl<'a, T: 'a> NeighborsDiagonalIterator<'a, T> for CustomGrid<T> {
-    type NeighborIter = impl Iterator<Item = ((usize, usize), &'a T)>;
-
-    fn iter_diagonal_neighbors(&'a self, row: usize, col: usize) -> Self::NeighborIter {
+    pub fn iter_diagonal_neighbors(&self, row: usize, col: usize) -> impl Iterator<Item=((usize, usize), &T)> {
         [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
             .iter()
             .map(move |(col_offset, row_offset)| ((col as isize + col_offset), (row as isize + row_offset)))
@@ -191,73 +199,95 @@ impl<'a, T: 'a> NeighborsDiagonalIterator<'a, T> for CustomGrid<T> {
                 if col.is_negative() || row.is_negative() {
                     None
                 } else {
-                    self.get(row as usize, col as usize)
+                    self.0.get(row as usize, col as usize)
                         .map(|val| ((row as usize, col as usize), val))
                 }
             })
     }
-}
 
-pub trait Neighbors<T> {
-    fn right(&self, row: usize, col: usize) -> Option<((usize, usize), &T)>;
-    fn left(&self, row: usize, col: usize) -> Option<((usize, usize), &T)>;
-    fn up(&self, row: usize, col: usize) -> Option<((usize, usize), &T)>;
-    fn down(&self, row: usize, col: usize) -> Option<((usize, usize), &T)>;
-    fn right_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)>;
-    fn left_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)>;
-    fn up_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)>;
-    fn down_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)>;
-}
-
-impl<T> Neighbors<T> for CustomGrid<T> {
-    fn right(&self, row: usize, col: usize) -> Option<((usize, usize), &T)> {
-        self.get(row, col + 1).map(|val| ((row, col + 1), val))
+    pub fn right(&self, row: usize, col: usize) -> Option<&T> {
+        self.0.get(row, col + 1)
+    }
+    pub fn right_indexed(&self, row: usize, col: usize) -> Option<((usize, usize), &T)> {
+        self.0.get(row, col + 1).map(|val| ((row, col + 1), val))
     }
 
-    fn left(&self, row: usize, col: usize) -> Option<((usize, usize), &T)> {
+    pub fn left(&self, row: usize, col: usize) -> Option<&T> {
         if col == 0 {
             None
         } else {
-            self.get(row, col - 1).map(|val| ((row, col - 1), val))
+            self.0.get(row, col - 1)
         }
     }
-
-    fn up(&self, row: usize, col: usize) -> Option<((usize, usize), &T)> {
-        if row == 0 {
-            None
-        } else {
-            self.get(row - 1, col).map(|val| ((row - 1, col), val))
-        }
-    }
-
-    fn down(&self, row: usize, col: usize) -> Option<((usize, usize), &T)> {
-        self.get(row + 1, col).map(|val| ((row + 1, col), val))
-    }
-
-    fn right_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)> {
-        self.get_mut(row, col + 1).map(|val| ((row, col + 1), val))
-    }
-
-    fn left_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)> {
+    pub fn left_indexed(&self, row: usize, col: usize) -> Option<((usize, usize), &T)> {
         if col == 0 {
             None
         } else {
-            self.get_mut(row, col - 1).map(|val| ((row, col - 1), val))
+            self.0.get(row, col - 1).map(|val| ((row, col - 1), val))
         }
     }
 
-    fn up_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)> {
+
+    pub fn up(&self, row: usize, col: usize) -> Option<&T> {
         if row == 0 {
             None
         } else {
-            self.get_mut(row - 1, col).map(|val| ((row - 1, col), val))
+            self.0.get(row - 1, col)
         }
     }
 
-    fn down_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)> {
-        self.get_mut(row + 1, col).map(|val| ((row + 1, col), val))
+    pub fn up_indexed(&self, row: usize, col: usize) -> Option<((usize, usize), &T)> {
+        if row == 0 {
+            None
+        } else {
+            self.0.get(row - 1, col).map(|val| ((row - 1, col), val))
+        }
+    }
+
+    pub fn down(&self, row: usize, col: usize) -> Option<&T> {
+        self.0.get(row + 1, col)
+    }
+
+    pub fn down_indexed(&self, row: usize, col: usize) -> Option<((usize, usize), &T)> {
+        self.0.get(row + 1, col).map(|val| ((row + 1, col), val))
+    }
+
+    pub fn right_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)> {
+        self.0.get_mut(row, col + 1).map(|val| ((row, col + 1), val))
+    }
+
+    pub fn left_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)> {
+        if col == 0 {
+            None
+        } else {
+            self.0.get_mut(row, col - 1).map(|val| ((row, col - 1), val))
+        }
+    }
+
+    pub fn up_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)> {
+        if row == 0 {
+            None
+        } else {
+            self.0.get_mut(row - 1, col).map(|val| ((row - 1, col), val))
+        }
+    }
+
+    pub fn down_mut(&mut self, row: usize, col: usize) -> Option<((usize, usize), &mut T)> {
+        self.0.get_mut(row + 1, col).map(|val| ((row + 1, col), val))
     }
 }
+
+impl<T: Display> CustomGrid<T> {
+    pub fn print(grid: &CustomGrid<T>) {
+        for row in 0..grid.0.rows() {
+            for col in 0..grid.0.cols() {
+                print!("{}", grid.0.get(row, col).unwrap())
+            }
+            println!()
+        }
+    }
+}
+
 
 pub fn input_to_grid<T: FromStr>(input: &str) -> Result<CustomGrid<T>, <T as FromStr>::Err> {
     let lines: Vec<&str> = input.lines().map(|line| line.trim()).collect();
@@ -269,24 +299,5 @@ pub fn input_to_grid<T: FromStr>(input: &str) -> Result<CustomGrid<T>, <T as Fro
         .map(|c| c.to_string().parse::<T>())
         .collect();
 
-    Ok(CustomGrid::from_vec(grid_data?, cols))
-}
-
-pub fn expand_grid<T: Default + Clone>(grid: &CustomGrid<T>, empty: T) -> CustomGrid<T> {
-    let mut expanded_grid: Grid<T> = CustomGrid::init(grid.rows() * 2+1, grid.cols() * 2+1, empty);
-
-    for ((row, col), value) in grid.indexed_iter() {
-        *expanded_grid.get_mut(row * 2+1, col * 2+1).unwrap() = value.clone();
-    }
-
-    expanded_grid
-}
-
-pub fn print_grid<T: Display>(grid: &CustomGrid<T>) {
-    for row in 0..grid.rows() {
-        for col in 0..grid.cols() {
-            print!("{}", grid.get(row, col).unwrap())
-        }
-        println!()
-    }
+    Ok(CustomGrid(Grid::from_vec(grid_data?, cols)))
 }

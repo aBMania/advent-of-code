@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::iter::once;
 use itertools::Itertools;
 
-use advent_of_code::{CustomGrid, input_to_grid, read_input, should_submit, submit, NeighborsDiagonalIterator};
+use advent_of_code::{CustomGrid, input_to_grid, read_input, should_submit, submit};
 
 const DAY: u8 = 3;
 const YEAR: u16 = 2023;

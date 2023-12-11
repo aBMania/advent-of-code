@@ -1,13 +1,11 @@
-use grid::Grid;
-
-use advent_of_code::{input_to_grid, read_input, should_submit, submit};
+use advent_of_code::{CustomGrid, input_to_grid, read_input, should_submit, submit};
 
 const DAY: u8 = 9;
 const YEAR: u16 = 2021;
 
 const NEXT: [(isize, isize); 4] = [(0, -1), (0, 1), (-1, 0), (1, 0)];
 
-fn lowest_points(grid: &Grid<u8>) -> Vec<(usize, usize)> {
+fn lowest_points(grid: &CustomGrid<u8>) -> Vec<(usize, usize)> {
     let mut lowest_points: Vec<(usize, usize)> = vec![];
 
     for ((y, x), value) in grid.indexed_iter() {
@@ -29,7 +27,7 @@ fn lowest_points(grid: &Grid<u8>) -> Vec<(usize, usize)> {
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let grid: Grid<u8> = input_to_grid(input).unwrap();
+    let grid: CustomGrid<u8> = input_to_grid(input).unwrap();
 
     let lowest_points = lowest_points(&grid);
 
@@ -38,7 +36,7 @@ pub fn part_one(input: &str) -> Option<u32> {
     }))
 }
 
-fn basin(grid: &mut Grid<u8>, x: usize, y: usize) -> usize {
+fn basin(grid: &mut CustomGrid<u8>, x: usize, y: usize) -> usize {
     grid[y][x] = 9;
 
     NEXT
@@ -54,7 +52,7 @@ fn basin(grid: &mut Grid<u8>, x: usize, y: usize) -> usize {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let mut grid: Grid<u8> = input_to_grid(input).unwrap();
+    let mut grid: CustomGrid<u8> = input_to_grid(input).unwrap();
 
     let lowest_points = lowest_points(&grid);
 
