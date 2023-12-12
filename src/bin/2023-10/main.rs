@@ -205,8 +205,6 @@ pub fn part_two(input: &str) -> Option<u32> {
         }
     }
 
-    // println!("{:?}", grid);
-
     Some(
         count_inside_space(&grid)
     )
